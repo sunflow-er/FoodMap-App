@@ -1,6 +1,7 @@
 package com.masonk.foodmap
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -11,6 +12,9 @@ import com.naver.maps.map.CameraAnimation
 import com.naver.maps.map.CameraUpdate
 import com.naver.maps.map.NaverMap
 import com.naver.maps.map.OnMapReadyCallback
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var binding: ActivityMainBinding
@@ -34,7 +38,23 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // 비동기로 NaverMap 객체 얻기 -> 콜백
         binding.mapView.getMapAsync(this)
 
-        
+        SearchRepository.getFamousRestaurantList("대구").enqueue(object : Callback<FamousRestaurantList> {
+            override fun onResponse(
+                p0: Call<FamousRestaurantList>,
+                response: Response<FamousRestaurantList>
+            ) {
+                if (response.isSuccessful) {
+                    Log.e("SUCCESS", "${response.body().toString()}")
+                } else {
+                    Log.e("ERROR", "Response code: ${response.code()}, message: ${response.message()}")
+                }
+            }
+
+            override fun onFailure(p0: Call<FamousRestaurantList>, t: Throwable) {
+                Log.e("FAILURE", "${t.message}")
+            }
+
+        })
     }
 
     override fun onStart() {

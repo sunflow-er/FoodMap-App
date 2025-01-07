@@ -52,4 +52,11 @@ dependencies {
 
     // 네이버 지도 SDK
     implementation("com.naver.maps:map-sdk:3.20.0")
+
+    // retrofit2
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-moshi:2.11.0") // moshi converter
+
+    // moshi
+    implementation("com.squareup.moshi:moshi-kotlin:1.15.2")
 }
