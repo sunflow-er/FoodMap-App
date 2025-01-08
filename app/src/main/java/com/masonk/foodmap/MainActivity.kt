@@ -9,6 +9,8 @@ import androidx.appcompat.widget.SearchView.OnQueryTextListener
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_COLLAPSED
 import com.masonk.foodmap.databinding.ActivityMainBinding
 import com.naver.maps.geometry.LatLng
 import com.naver.maps.geometry.Tm128
@@ -31,10 +33,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     // NaverMap 객체가 준비되었는지 확인
     private var isMapInit = false
 
+    // 마커를 저장하는 리스트
+    private var markerList = emptyList<Marker>()
+
+    // 바텀시트 리사이클러뷰 어댑터
     private var famousRestaurantAdapter = FamousRestaurantAdapter { position ->
         // onClick(LatLng)
+
+        // 바텀시트 내리기
+        collapseBottomSheet()
+
         // 카메라 이동
-        moveCamera(position)
+        moveCamera(position, 17.0)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -82,9 +92,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                     ).show()
                                     return
                                 }
+                                
+                                // 각 마커마다 지도와의 연결 해제
+                                // 기존 마커 정보 삭제
+                                markerList.forEach { it.map = null }
 
                                 // 검색 결과를 바탕으로 마커 리스트 만들기
-                                val markerList = famousRestaurantList.map {
+                                markerList = famousRestaurantList.map {
                                     // 마커 객체 생성
                                     Marker().apply {
                                         // 위치, 좌표
@@ -104,8 +118,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                 // 바텀시트의 리사이클러뷰 어댑터에 리스트 데이터 할당
                                 famousRestaurantAdapter.setData(famousRestaurantList)
 
+                                // 바텀시트 내리기
+                                collapseBottomSheet()
+
                                 // 첫 번째 마커의 위치로 카메라 이동
-                                moveCamera(markerList.first().position)
+                                moveCamera(markerList.first().position, 13.0)
                             }
 
                             override fun onFailure(p0: Call<FamousRestaurantList>, t: Throwable) {
@@ -178,16 +195,25 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         isMapInit = true
     }
 
-    private fun moveCamera(position: LatLng) {
+    private fun moveCamera(position: LatLng, zoomLevel: Double) {
         if (!isMapInit) return
 
         // 지도를 바라보는 카메라의 이동을 정의한 객체
         val cameraUpdate = CameraUpdate
-            .scrollTo(position) // 이동할 위치 지정
+            .scrollAndZoomTo(position, zoomLevel) // 이동할 위치, 줌 레벨 지정
             .animate(CameraAnimation.Easing) // 카메라 이동 시 애니메이션 적용, 부드럽게 가감속되는 애니메이션
 
         // 카메라 이동
         naverMap.moveCamera(cameraUpdate)
+    }
+
+    // 바텀시트 내리기
+    private fun collapseBottomSheet() {
+        // BottomSheetBehavior 가져오기
+        val bottomSheetBehavior = BottomSheetBehavior.from(binding.bottomSheetLayout.root)
+
+        // 바텀시트 내리기
+        bottomSheetBehavior.state = STATE_COLLAPSED
     }
 
 }
