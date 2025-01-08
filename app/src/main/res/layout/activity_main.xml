@@ -7,9 +7,21 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
+    <!-- 먼저 작성될수록 아래에 위치-->
     <com.naver.maps.map.MapView
         android:id="@+id/map_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
+
+    <androidx.appcompat.widget.SearchView
+        android:id="@+id/search_view"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_margin="8dp"
+        android:background="@color/white"
+        />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
