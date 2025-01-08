@@ -116,6 +116,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         })
 
+        binding.bottomSheetLayout.famousRestaurantsRecyclerView
 
     }
 
