@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView.OnQueryTextListener
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.masonk.foodmap.databinding.ActivityMainBinding
 import com.naver.maps.geometry.LatLng
 import com.naver.maps.geometry.Tm128
@@ -16,24 +17,31 @@ import com.naver.maps.map.CameraUpdate
 import com.naver.maps.map.NaverMap
 import com.naver.maps.map.OnMapReadyCallback
 import com.naver.maps.map.overlay.Marker
+import okhttp3.internal.notify
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var binding: ActivityMainBinding
-    
+
     // NaverMap 객체
     private lateinit var naverMap: NaverMap
 
     // NaverMap 객체가 준비되었는지 확인
     private var isMapInit = false
 
+    private var famousRestaurantAdapter = FamousRestaurantAdapter { position ->
+        // onClick(LatLng)
+        // 카메라 이동
+        moveCamera(position)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        
+
         // MapView를 MainActivity 생명주기와 동기화
         // MapView는 자체적인 생명주기 메서드를 가지고 있으며, 이를 Activity의 생명주기 메서드와 연결
         // 지도를 올바르게 초기화하고, 일시 중지하고, 다시 시작하고, 메모리가 부족할 때 적절히 처리
@@ -49,56 +57,62 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 // 검색어가 있으면
                 if (query?.isNotEmpty() == true) {
                     // 검색
-                    SearchRepository.getFamousRestaurantList(query).enqueue(object : Callback<FamousRestaurantList> {
-                        override fun onResponse(
-                            p0: Call<FamousRestaurantList>,
-                            response: Response<FamousRestaurantList>
-                        ) {
-                            // 검색 결과 가져오기
-                            val famousRestaurantList = response.body()?.items.orEmpty()
+                    SearchRepository.getFamousRestaurantList(query)
+                        .enqueue(object : Callback<FamousRestaurantList> {
+                            override fun onResponse(
+                                p0: Call<FamousRestaurantList>,
+                                response: Response<FamousRestaurantList>
+                            ) {
+                                // 검색 결과 가져오기
+                                val famousRestaurantList = response.body()?.items.orEmpty()
 
-                            Log.e("famousRestaurantList",famousRestaurantList.toString())
-
-                            // 검색 결과가 없을 때
-                            if (famousRestaurantList.isEmpty()) {
-                                Toast.makeText(this@MainActivity, "검색 결과가 없습니다.", Toast.LENGTH_SHORT).show()
-                                return
-                            } else if (!isMapInit) { // 지도가 초기화되지 않았을 때
-                                Toast.makeText(this@MainActivity, "오류가 발생했습니다.", Toast.LENGTH_SHORT).show()
-                                return
-                            }
-
-                            // 검색 결과를 바탕으로 마커 리스트 만들기
-                            val markerList = famousRestaurantList.map {
-                                // 마커 객체 생성
-                                Marker().apply {
-                                    // 위치, 좌표
-                                    position = LatLng((it.mapy / 10_000_000.0), (it.mapx / 10_000_000.0)) // WGS84 -> WGS84
-
-                                    // 캡션
-                                    captionText = it.title
-                                    
-                                    // 마커와 네이버맵 연결
-                                    map = naverMap
+                                // 검색 결과가 없을 때
+                                if (famousRestaurantList.isEmpty()) {
+                                    Toast.makeText(
+                                        this@MainActivity,
+                                        "검색 결과가 없습니다.",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    return
+                                } else if (!isMapInit) { // 지도가 초기화되지 않았을 때
+                                    Toast.makeText(
+                                        this@MainActivity,
+                                        "오류가 발생했습니다.",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    return
                                 }
+
+                                // 검색 결과를 바탕으로 마커 리스트 만들기
+                                val markerList = famousRestaurantList.map {
+                                    // 마커 객체 생성
+                                    Marker().apply {
+                                        // 위치, 좌표
+                                        position = LatLng(
+                                            (it.mapy / 10_000_000.0),
+                                            (it.mapx / 10_000_000.0)
+                                        ) // WGS84 -> WGS84
+
+                                        // 캡션
+                                        captionText = it.title
+
+                                        // 마커와 네이버맵 연결
+                                        map = naverMap
+                                    }
+                                }
+
+                                // 바텀시트의 리사이클러뷰 어댑터에 리스트 데이터 할당
+                                famousRestaurantAdapter.setData(famousRestaurantList)
+
+                                // 첫 번째 마커의 위치로 카메라 이동
+                                moveCamera(markerList.first().position)
                             }
 
-                            // 지도를 바라보는 카메라의 이동을 정의한 객체
-                            val cameraUpdate = CameraUpdate
-                                .scrollTo(markerList.first().position) // 첫 번째 마커의 위치로 카메라 이동
-                                .animate(CameraAnimation.Easing) // 카메라 이동 시 애니메이션 적용, 부드럽게 가감속되는 애니메이션
+                            override fun onFailure(p0: Call<FamousRestaurantList>, t: Throwable) {
 
-                            Log.e("POSITION", markerList.first().position.toString())
+                            }
 
-                            // 카메라 이동
-                            naverMap.moveCamera(cameraUpdate)
-                        }
-
-                        override fun onFailure(p0: Call<FamousRestaurantList>, t: Throwable) {
-                            Log.e("FAILURE", "${t.message}")
-                        }
-
-                    })
+                        })
 
                     // 기본 동작 수행
                     // 키보드 숨기기, 검색어 유지
@@ -116,7 +130,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         })
 
-        binding.bottomSheetLayout.famousRestaurantsRecyclerView
+        binding.bottomSheetLayout.famousRestaurantsRecyclerView.apply {
+            layoutManager = LinearLayoutManager(context)
+            adapter = famousRestaurantAdapter
+        }
 
     }
 
@@ -159,6 +176,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onMapReady(map: NaverMap) {
         naverMap = map
         isMapInit = true
+    }
+
+    private fun moveCamera(position: LatLng) {
+        if (!isMapInit) return
+
+        // 지도를 바라보는 카메라의 이동을 정의한 객체
+        val cameraUpdate = CameraUpdate
+            .scrollTo(position) // 이동할 위치 지정
+            .animate(CameraAnimation.Easing) // 카메라 이동 시 애니메이션 적용, 부드럽게 가감속되는 애니메이션
+
+        // 카메라 이동
+        naverMap.moveCamera(cameraUpdate)
     }
 
 }
